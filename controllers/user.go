@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"unicode"
 
 	"github.com/go-playground/locales/en"
 	ut "github.com/go-playground/universal-translator"
@@ -21,7 +22,7 @@ type User struct {
 	Email    string             `json:"email" bson:"email" validate:"required,email"`
 	Name     string             `json:"name" bson:"name"`
 	Surname  string             `json:"surname" bson:"surname"`
-	Password string             `json:"password" bson:"password" validate:"required"`
+	Password string             `json:"password" bson:"password" validate:"required,password" `
 	Dob      primitive.DateTime `json:"dob" bson:"dob"`
 }
 
@@ -44,8 +45,41 @@ func CreateUser(golangDB *mongo.Database) http.HandlerFunc {
 
 		validate := validator.New()
 		en_translations.RegisterDefaultTranslations(validate, trans)
-		err = validate.Struct(user)
 
+		// Manual validation for password.
+		_ = validate.RegisterValidation("password", func(fl validator.FieldLevel) bool {
+
+			var (
+				hasMinLen  = false
+				hasUpper   = false
+				hasLower   = false
+				hasNumber  = false
+				hasSpecial = false
+			)
+
+			// Check length
+			if len(fl.Field().String()) >= 6 {
+				hasMinLen = true
+			}
+
+			// Check Upper, Lower, numbers and symbols are included.
+			for _, value := range fl.Field().String() {
+				switch {
+				case unicode.IsUpper(value):
+					hasUpper = true
+				case unicode.IsLower(value):
+					hasLower = true
+				case unicode.IsNumber(value):
+					hasNumber = true
+				case unicode.IsPunct(value) || unicode.IsSymbol(value):
+					hasSpecial = true
+				}
+			}
+			return hasMinLen && hasUpper && hasLower && hasNumber && hasSpecial
+		})
+
+		// Response if validation are not passed.
+		err = validate.Struct(user)
 		if err != nil {
 			errs := err.(validator.ValidationErrors)
 			lib.WriteResponse(w, http.StatusBadRequest, errs.Translate(trans))
