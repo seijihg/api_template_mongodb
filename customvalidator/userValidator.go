@@ -52,13 +52,29 @@ func CheckUserValid(userStruct models.User) validator.ValidationErrorsTranslatio
 	})
 
 	// Custom errors message
-	_ = validate.RegisterTranslation("password", trans, func(ut ut.Translator) error {
-		return ut.Add("passwd", "{0} is not strong enough", true) // see universal-translator for details
+	// Required
+	_ = validate.RegisterTranslation("required", trans, func(ut ut.Translator) error {
+		return ut.Add("required", "{0} is a required field", true) // see universal-translator for details
 	}, func(ut ut.Translator, fe validator.FieldError) string {
-		t, _ := ut.T("passwd", fe.Field())
+		t, _ := ut.T("required", fe.Field())
+		return t
+	})
+	// Email.
+	_ = validate.RegisterTranslation("email", trans, func(ut ut.Translator) error {
+		return ut.Add("email", "{0} must be a valid email", true) // see universal-translator for details
+	}, func(ut ut.Translator, fe validator.FieldError) string {
+		t, _ := ut.T("email", fe.Field())
+		return t
+	})
+	// Password.
+	_ = validate.RegisterTranslation("password", trans, func(ut ut.Translator) error {
+		return ut.Add("password", "{0} is not strong enough", true) // see universal-translator for details
+	}, func(ut ut.Translator, fe validator.FieldError) string {
+		t, _ := ut.T("password", fe.Field())
 		return t
 	})
 
+	// Validate struct and return nil or errors
 	err := validate.Struct(userStruct)
 	if err != nil {
 		errs := err.(validator.ValidationErrors)

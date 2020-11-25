@@ -15,3 +15,7 @@ curl -sSfL https://raw.githubusercontent.com/cosmtrek/air/master/install.sh | sh
 ~/go/bin/air
 
 ```
+
+- MongoDB setup.
+- Models and controllers for Restful USER.
+- Validation package added with custom messages.
