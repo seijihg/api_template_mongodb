@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,7 +16,9 @@ import (
 // ConnectDB is setting up database connection.
 func ConnectDB() *mongo.Client {
 
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb+srv://lehoang:WegTCYVpPINPmG3y@golangtemplate.uusoo.mongodb.net/<dbname>?retryWrites=true&w=majority"))
+	dbName := os.Getenv("DB_NAME")
+
+	client, err := mongo.NewClient(options.Client().ApplyURI(dbName))
 	if err != nil {
 		log.Fatal(err)
 	}
