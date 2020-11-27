@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/seijihg/api_template_mongodb/lib"
 	"github.com/seijihg/api_template_mongodb/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
@@ -30,11 +33,12 @@ func CreateUser(golangDB *mongo.Database) http.HandlerFunc {
 		// Response if validation are not passed.
 		validationError := customvalidator.CheckUserValid(user)
 		if validationError != nil {
+			fmt.Println("hitting here")
 			lib.WriteResponse(w, http.StatusBadRequest, validationError)
 			return
 		}
 
-		// usersCollection := golangDB.Collection("users")
+		usersCollection := golangDB.Collection("users")
 
 		// body, err := ioutil.ReadAll(r.Body)
 		// if err != nil {
@@ -54,18 +58,33 @@ func CreateUser(golangDB *mongo.Database) http.HandlerFunc {
 			fmt.Println("Bcrypt Error:", err)
 			lib.WriteResponse(w, http.StatusBadRequest, err.Error())
 		}
-
 		user.Password = string(bcryptedPass)
 
-		// res, err := usersCollection.InsertOne(context.TODO(), user)
-		// if err != nil {
-		// 	fmt.Println("InsertOne ERROR:", err)
-		// 	lib.WriteResponse(w, http.StatusBadRequest, err.Error())
-		// 	return
-		// }
+		// Adding Update and Create at.
+		user.CreatedAt = time.Now()
+		user.UpdatedAt = time.Now()
 
-		// fmt.Println("Response from DB:", res)
+		// Checking if email already exists.
+		var result models.User
+		userNotExist := usersCollection.FindOne(context.TODO(), bson.D{{"email", user.Email}}).Decode(&result)
 
-		// lib.WriteResponse(w, http.StatusOK, res)
+		// If user exist it will go to here.
+		if userNotExist == nil {
+			fmt.Println("User exists")
+			lib.WriteResponse(w, http.StatusBadRequest, map[string]string{"error": "User already exists"})
+			return
+		}
+
+		// If user does not exist then Insert to DB.
+		res, err := usersCollection.InsertOne(context.TODO(), user)
+		if err != nil {
+			fmt.Println("InsertOne ERROR:", err)
+			lib.WriteResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		fmt.Println("Response from DB:", res)
+
+		lib.WriteResponse(w, http.StatusOK, res)
 	}
 }
